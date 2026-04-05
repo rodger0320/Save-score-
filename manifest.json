@@ -1,0 +1,21 @@
+{
+  "name": "SAVE Score Calculator",
+  "short_name": "SAVE Score",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#1f4fb5",
+  "description": "Mobile PWA calculator for SAVE score and 6-week mortality estimation.",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
