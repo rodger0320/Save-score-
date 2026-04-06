@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>大腸鏡結構化報告 PWA</title>
+  <meta name="theme-color" content="#2563eb" />
+  <meta name="description" content="大腸鏡結構化報告 PWA，適用於大腸鏡檢查紀錄、品質指標登錄與院內標準化文件建置。" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <style>
+    :root {
+      --bg: #f4f7fb; --card: #ffffff; --line: #d8e1ea; --text: #1f2937; --muted: #64748b;
+      --accent: #2563eb; --accent-soft: #eff6ff; --ok: #15803d; --warn: #b45309;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Noto Sans TC","Microsoft JhengHei",Arial,sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+    .container { max-width: 1180px; margin: 24px auto; padding: 0 16px 40px; }
+    .header { background: linear-gradient(135deg,#eef4ff,#ffffff); border: 1px solid var(--line); border-radius: 22px; padding: 26px; margin-bottom: 20px; box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06); }
+    .header h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: .4px; }
+    .header p { margin: 0; color: var(--muted); font-size: 14px; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+    button { border: 0; border-radius: 14px; padding: 10px 16px; font-size: 14px; font-weight: 700; cursor: pointer; background: var(--accent); color: white; box-shadow: 0 8px 18px rgba(37,99,235,.18); }
+    button.secondary { background: #e2e8f0; color: #1e293b; box-shadow: none; }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+    .card { grid-column: span 12; background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 18px; box-shadow: 0 8px 24px rgba(15,23,42,.04); }
+    .card h2 { margin: 0 0 16px; font-size: 20px; border-left: 4px solid var(--accent); padding-left: 10px; }
+    .form-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px 14px; }
+    .field { grid-column: span 4; display: flex; flex-direction: column; gap: 6px; }
+    .field.span-2 { grid-column: span 2; } .field.span-3 { grid-column: span 3; } .field.span-4 { grid-column: span 4; } .field.span-5 { grid-column: span 5; } .field.span-8 { grid-column: span 8; } .field.span-9 { grid-column: span 9; } .field.span-12 { grid-column: span 12; }
+    label { font-size: 13px; font-weight: 700; color: #334155; }
+    input, select, textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 12px; padding: 10px 12px; font-size: 14px; background: white; }
+    textarea { min-height: 96px; resize: vertical; }
+    .checkbox-group { display: flex; flex-wrap: wrap; gap: 10px 16px; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 12px; background: #fff; }
+    .checkbox-group label { font-weight: 500; display: flex; align-items: center; gap: 6px; margin: 0; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .result-box { background: var(--accent-soft); border: 1px solid #bfdbfe; border-radius: 14px; padding: 14px; display: flex; flex-wrap: wrap; gap: 12px 24px; font-size: 15px; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .badge.ok { background: #dcfce7; color: var(--ok); } .badge.warn { background: #fef3c7; color: var(--warn); }
+    .lesion-card { border: 1px dashed #bfd1e5; border-radius: 16px; padding: 14px; margin-top: 12px; background: #fbfdff; }
+    .report-preview { white-space: pre-wrap; background: #f8fafc; border: 1px solid var(--line); border-radius: 16px; padding: 16px; font-size: 14px; }
+    .install-tip { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: #eef2ff; color: #3730a3; font-size: 13px; border: 1px solid #c7d2fe; }
+    @media (max-width: 900px) { .field, .field.span-2, .field.span-3, .field.span-4, .field.span-5, .field.span-8, .field.span-9 { grid-column: span 12; } }
+    @media print { body { background: white; } .toolbar, .install-tip { display: none; } .card, .header { box-shadow: none; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>大腸鏡結構化報告 PWA</h1>
+      <p>可安裝、可離線開啟的網頁版。適用於大腸鏡檢查紀錄、品質指標登錄與院內標準化文件建置。</p>
+      <div class="toolbar">
+        <button type="button" onclick="window.print()">列印 / 存成 PDF</button>
+        <button type="button" onclick="generatePreview()">產生報告摘要</button>
+        <button type="button" class="secondary" onclick="resetForm()">清空表單</button>
+      </div>
+      <div class="install-tip">此版本已加入 PWA 基本設定與離線快取。部署到網站後，可用瀏覽器「安裝 App」加入桌面或手機主畫面。</div>
+    </div>
+
+    <form id="reportForm">
+      <div class="grid">
+        <section class="card"><h2>一、基本資料</h2><div class="form-grid">
+          <div class="field"><label>病歷號碼</label><input id="patientId"></div>
+          <div class="field"><label>姓名</label><input id="name"></div>
+          <div class="field span-2"><label>性別</label><select id="sex"><option value=""></option><option>男</option><option>女</option></select></div>
+          <div class="field span-2"><label>年齡</label><input id="age" type="number" min="0"></div>
+          <div class="field span-3"><label>檢查日期</label><input id="procedureDate" type="date"></div>
+          <div class="field span-3"><label>檢查醫師</label><input id="endoscopist"></div>
+          <div class="field span-3"><label>助理人員</label><input id="assistant"></div>
+          <div class="field span-3"><label>檢查地點</label><input id="location"></div>
+        </div></section>
+
+        <section class="card"><h2>二、檢查適應症</h2><div class="form-grid">
+          <div class="field span-12"><label>適應症（可複選）</label><div class="checkbox-group">
+            <label><input type="checkbox" name="indication" value="篩檢/FIT陽性">篩檢/FIT陽性</label>
+            <label><input type="checkbox" name="indication" value="監測追蹤">監測追蹤</label>
+            <label><input type="checkbox" name="indication" value="症狀評估">症狀評估</label>
+            <label><input type="checkbox" name="indication" value="影像異常">影像異常</label>
+            <label><input type="checkbox" name="indication" value="治療性檢查">治療性檢查</label>
+          </div></div>
+          <div class="field span-12"><label>其他說明</label><input id="indicationOther"></div>
+        </div></section>
+
+        <section class="card"><h2>三、術前評估</h2><div class="form-grid">
+          <div class="field span-2"><label>ASA 分級</label><select id="asa"><option value=""></option><option>I</option><option>II</option><option>III</option><option>IV</option></select></div>
+          <div class="field span-4"><label>抗凝血 / 抗血小板藥物</label><input id="anticoagulant" placeholder="無 / Aspirin / Clopidogrel / DOAC / Warfarin"></div>
+          <div class="field span-3"><label>麻醉方式</label><select id="sedation"><option value=""></option><option>無鎮靜</option><option>Conscious sedation</option><option>Deep sedation</option><option>GA</option></select></div>
+          <div class="field span-3"><label>過敏史</label><input id="allergy"></div>
+        </div></section>
+
+        <section class="card"><h2>四、腸道準備品質（BBPS）</h2><div class="form-grid">
+          <div class="field span-2"><label>右側結腸</label><select id="bbpsR" onchange="calcBBPS()"><option value=""></option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+          <div class="field span-2"><label>橫結腸</label><select id="bbpsT" onchange="calcBBPS()"><option value=""></option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+          <div class="field span-2"><label>左側結腸</label><select id="bbpsL" onchange="calcBBPS()"><option value=""></option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+          <div class="field span-3"><label>BBPS 總分</label><input id="bbpsTotal" readonly></div>
+          <div class="field span-3"><label>BBPS 評估</label><select id="bbpsGrade"><option value=""></option><option>Excellent</option><option>Good</option><option>Fair</option><option>Poor</option></select></div>
+        </div></section>
+
+        <section class="card"><h2>五、插入與時間紀錄</h2>
+          <div class="form-grid">
+            <div class="field span-3"><label>檢查開始時間</label><input id="startTime" type="time" step="1" onchange="calcTimes()"></div>
+            <div class="field span-3"><label>抵達盲腸/最深處時間</label><input id="cecalTime" type="time" step="1" onchange="calcTimes()"></div>
+            <div class="field span-3"><label>檢查結束時間</label><input id="endTime" type="time" step="1" onchange="calcTimes()"></div>
+            <div class="field span-3"><label>是否到達盲腸</label><select id="cecalReached"><option value=""></option><option>是</option><option>否</option></select></div>
+          </div>
+          <div class="result-box" style="margin-top:14px;">
+            <div>Insertion time：<strong id="insertionTime">--</strong></div>
+            <div>Withdrawal time：<strong id="withdrawalTime">--</strong></div>
+            <div>Withdrawal time ≥ 6 分鐘：<span id="withdrawalFlag" class="badge warn">待計算</span></div>
+          </div>
+          <div class="muted" style="margin-top:8px;">註：若為純診斷性大腸鏡，withdrawal time 建議至少 6 分鐘。</div>
+        </section>
+
+        <section class="card"><h2>六、檢查完整性</h2><div class="form-grid">
+          <div class="field span-3"><label>完整性</label><select id="completeness"><option value=""></option><option>Complete colonoscopy</option><option>Incomplete</option></select></div>
+          <div class="field span-9"><label>未完成原因</label><input id="incompleteReason" placeholder="疼痛 / 狹窄 / prep 不佳 / 其他"></div>
+        </div></section>
+
+        <section class="card">
+          <h2>七、病灶發現與描述</h2>
+          <div id="lesionContainer"></div>
+          <div class="toolbar" style="margin-top:14px;"><button type="button" onclick="addLesion()">新增病灶</button></div>
+        </section>
+
+        <section class="card"><h2>八、其他發現</h2><div class="form-grid">
+          <div class="field span-12"><label>其他發現</label><textarea id="otherFindings" placeholder="例如：diverticulosis、hemorrhoid、colitis、angioectasia、post-operative change 等"></textarea></div>
+        </div></section>
+
+        <section class="card"><h2>九、診斷與建議</h2><div class="form-grid">
+          <div class="field span-12"><label>內視鏡診斷</label><textarea id="diagnosis"></textarea></div>
+          <div class="field span-12"><label>追蹤與建議</label><textarea id="recommendation"></textarea></div>
+        </div></section>
+
+        <section class="card"><h2>十、報告摘要預覽</h2><div id="preview" class="report-preview">按下「產生報告摘要」後，這裡會自動整理出可直接貼入病歷的結構化文字。</div></section>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    let lesionCount = 0;
+    function addLesion() {
+      lesionCount += 1;
+      const wrap = document.createElement('div');
+      wrap.className = 'lesion-card';
+      wrap.dataset.index = lesionCount;
+      wrap.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+          <h3 style="margin:0;">病灶 ${lesionCount}</h3>
+          <button type="button" class="secondary" onclick="this.closest('.lesion-card').remove();">刪除</button>
+        </div>
+        <div class="form-grid" style="margin-top:12px;">
+          <div class="field span-3"><label>位置</label><select class="lesion-location"><option value=""></option><option>Cecum</option><option>Ascending colon</option><option>Hepatic flexure</option><option>Transverse colon</option><option>Splenic flexure</option><option>Descending colon</option><option>Sigmoid colon</option><option>Rectosigmoid</option><option>Rectum</option></select></div>
+          <div class="field span-2"><label>尺寸 (mm)</label><input class="lesion-size" type="number" min="0"></div>
+          <div class="field span-2"><label>數量</label><input class="lesion-count" type="number" min="1" value="1"></div>
+          <div class="field span-2"><label>Morphology</label><select class="lesion-morphology"><option value=""></option><option>0-Ip</option><option>0-Isp</option><option>0-Is</option><option>0-IIa</option><option>0-IIb</option><option>0-IIc</option><option>LST-G</option><option>LST-NG</option></select></div>
+          <div class="field span-3"><label>表面分類</label><select class="lesion-surface"><option value=""></option><option>NICE 1</option><option>NICE 2</option><option>NICE 3</option><option>JNET 1</option><option>JNET 2A</option><option>JNET 2B</option><option>JNET 3</option></select></div>
+          <div class="field span-3"><label>病灶處理</label><select class="lesion-action"><option value=""></option><option>Biopsy</option><option>Cold snare</option><option>Hot snare</option><option>EMR</option><option>ESD</option><option>No removal</option><option>Refer for treatment</option></select></div>
+          <div class="field span-4"><label>臨床印象</label><select class="lesion-impression"><option value=""></option><option>Adenoma</option><option>Serrated lesion</option><option>Hyperplastic polyp</option><option>Suspicious carcinoma</option><option>Subepithelial lesion</option><option>Inflammatory lesion</option></select></div>
+          <div class="field span-5"><label>補充描述</label><input class="lesion-note" placeholder="可填寫 ulcer, depression, non-lifting sign, scar, bleeding, piecemeal 等"></div>
+        </div>`;
+      document.getElementById('lesionContainer').appendChild(wrap);
+    }
+    function parseTimeToSeconds(value) {
+      if (!value) return null;
+      const parts = value.split(':').map(Number);
+      return parts[0] * 3600 + parts[1] * 60 + (parts[2] || 0);
+    }
+    function formatDuration(seconds) {
+      if (seconds == null || Number.isNaN(seconds)) return '--';
+      const min = Math.floor(seconds / 60), sec = seconds % 60;
+      return `${min} min ${sec} sec`;
+    }
+    function diffSeconds(start, end) {
+      if (start == null || end == null) return null;
+      let diff = end - start;
+      if (diff < 0) diff += 24 * 3600;
+      return diff;
+    }
+    function calcTimes() {
+      const start = parseTimeToSeconds(document.getElementById('startTime').value);
+      const deepest = parseTimeToSeconds(document.getElementById('cecalTime').value);
+      const end = parseTimeToSeconds(document.getElementById('endTime').value);
+      const insertion = diffSeconds(start, deepest);
+      const withdrawal = diffSeconds(deepest, end);
+      document.getElementById('insertionTime').textContent = formatDuration(insertion);
+      document.getElementById('withdrawalTime').textContent = formatDuration(withdrawal);
+      const flag = document.getElementById('withdrawalFlag');
+      if (withdrawal == null) { flag.textContent = '待計算'; flag.className = 'badge warn'; }
+      else if (withdrawal >= 360) { flag.textContent = '符合'; flag.className = 'badge ok'; }
+      else { flag.textContent = '未達 6 分鐘'; flag.className = 'badge warn'; }
+    }
+    function calcBBPS() {
+      const r = Number(document.getElementById('bbpsR').value || 0);
+      const t = Number(document.getElementById('bbpsT').value || 0);
+      const l = Number(document.getElementById('bbpsL').value || 0);
+      const anyFilled = document.getElementById('bbpsR').value || document.getElementById('bbpsT').value || document.getElementById('bbpsL').value;
+      document.getElementById('bbpsTotal').value = anyFilled ? (r + t + l) : '';
+    }
+    function checkedValues(name) {
+      return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(el => el.value);
+    }
+    function generatePreview() {
+      calcTimes(); calcBBPS();
+      const lesions = [...document.querySelectorAll('.lesion-card')].map((card, idx) => {
+        const location = card.querySelector('.lesion-location').value;
+        const size = card.querySelector('.lesion-size').value;
+        const count = card.querySelector('.lesion-count').value;
+        const morphology = card.querySelector('.lesion-morphology').value;
+        const surface = card.querySelector('.lesion-surface').value;
+        const action = card.querySelector('.lesion-action').value;
+        const impression = card.querySelector('.lesion-impression').value;
+        const note = card.querySelector('.lesion-note').value;
+        return `病灶${idx + 1}：位置 ${location || '-'}；尺寸 ${size || '-'} mm；數量 ${count || '-'}；Morphology ${morphology || '-'}；表面分類 ${surface || '-'}；病灶處理 ${action || '-'}；臨床印象 ${impression || '-'}${note ? '；補充描述 ' + note : ''}`;
+      });
+      const text = [
+        `【大腸鏡結構化報告】`,
+        `病歷號碼：${document.getElementById('patientId').value || ''}`,
+        `姓名：${document.getElementById('name').value || ''}    性別：${document.getElementById('sex').value || ''}    年齡：${document.getElementById('age').value || ''}`,
+        `檢查日期：${document.getElementById('procedureDate').value || ''}    檢查醫師：${document.getElementById('endoscopist').value || ''}`,
+        `適應症：${[...checkedValues('indication'), document.getElementById('indicationOther').value].filter(Boolean).join('、') || ''}`,
+        `ASA：${document.getElementById('asa').value || ''}；抗凝血藥物：${document.getElementById('anticoagulant').value || ''}；麻醉方式：${document.getElementById('sedation').value || ''}`,
+        `BBPS：右 ${document.getElementById('bbpsR').value || '-'} / 橫 ${document.getElementById('bbpsT').value || '-'} / 左 ${document.getElementById('bbpsL').value || '-'}；總分 ${document.getElementById('bbpsTotal').value || '-'}；評估 ${document.getElementById('bbpsGrade').value || ''}`,
+        `開始時間：${document.getElementById('startTime').value || ''}；抵達盲腸/最深處時間：${document.getElementById('cecalTime').value || ''}；結束時間：${document.getElementById('endTime').value || ''}`,
+        `Insertion time：${document.getElementById('insertionTime').textContent}；Withdrawal time：${document.getElementById('withdrawalTime').textContent}`,
+        `到達盲腸：${document.getElementById('cecalReached').value || ''}`,
+        `完整性：${document.getElementById('completeness').value || ''}${document.getElementById('incompleteReason').value ? '；原因：' + document.getElementById('incompleteReason').value : ''}`,
+        lesions.length ? lesions.join('\\n') : '未記錄病灶。',
+        `其他發現：${document.getElementById('otherFindings').value || ''}`,
+        `內視鏡診斷：${document.getElementById('diagnosis').value || ''}`,
+        `追蹤建議：${document.getElementById('recommendation').value || ''}`
+      ].join('\\n');
+      document.getElementById('preview').textContent = text;
+    }
+    function resetForm() {
+      document.getElementById('reportForm').reset();
+      document.getElementById('preview').textContent = '按下「產生報告摘要」後，這裡會自動整理出可直接貼入病歷的結構化文字。';
+      document.getElementById('lesionContainer').innerHTML = '';
+      lesionCount = 0;
+      document.getElementById('bbpsTotal').value = '';
+      document.getElementById('insertionTime').textContent = '--';
+      document.getElementById('withdrawalTime').textContent = '--';
+      const flag = document.getElementById('withdrawalFlag');
+      flag.textContent = '待計算';
+      flag.className = 'badge warn';
+      addLesion();
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      addLesion();
+      if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(console.error);
+    });
+  </script>
+</body>
+</html>
